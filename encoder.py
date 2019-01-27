@@ -49,7 +49,7 @@ class Encoder(TransformerMixin):
                 s.apply(lambda x: str(val) in str(x)), 
                 (s.astype(type(val))==val))
             if self.as_int:
-                X[f'{col}_{val}'].astype(int)
+                X[f'{col}_{val}'] = X[f'{col}_{val}'].astype(int)
         if self.drop: X.drop(col, axis=1, inplace=True)
 
     @staticmethod
