@@ -4,12 +4,13 @@ import pandas as pd
 from sklearn.base import TransformerMixin
 
 class Encoder(TransformerMixin):
-    def __init__(self, columns=None, thresh=0, sep='/', drop=True):
+    def __init__(self, columns=None, thresh=0, sep='/', drop=True, as_int=True):
         self.columns = columns
         self.thresh = thresh
         self.encoding = None
         self.sep = sep
         self.drop = drop
+        self.as_int = as_int
     
     def fit(self, X, y=None):
         c = self.columns
@@ -43,7 +44,12 @@ class Encoder(TransformerMixin):
     def _apply_encoding(self, X, col):
         s = X[col]
         for val in self.encoding[col]:
-            X[f'{col}_{val}'] = (s.astype(type(val))==val).astype(int)
+            has_sep = s.apply(lambda x: self.sep in str(x))
+            X[f'{col}_{val}'] = np.where(has_sep, 
+                s.apply(lambda x: str(val) in str(x)), 
+                (s.astype(type(val))==val))
+            if self.as_int:
+                X[f'{col}_{val}'].astype(int)
         if self.drop: X.drop(col, axis=1, inplace=True)
 
     @staticmethod
