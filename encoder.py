@@ -1,16 +1,17 @@
 import numpy as np
 import pandas as pd
-
+from collections import defaultdict
 from sklearn.base import TransformerMixin
 
 class Encoder(TransformerMixin):
-    def __init__(self, columns=None, thresh=0, sep='/', drop=True, as_int=True):
+    def __init__(self, columns=None, thresh=0, sep='/', drop=True, as_int=True, drop_one=True):
         self.columns = columns
         self.thresh = thresh
         self.encoding = None
         self.sep = sep
         self.drop = drop
         self.as_int = as_int
+        self.drop_one = drop_one
     
     def fit(self, X, y=None):
         c = self.columns
@@ -32,13 +33,31 @@ class Encoder(TransformerMixin):
 
     def _encode_column(self, s, thresh):
         output = []
+        seen = defaultdict(int)
         for val, n in s.value_counts().iteritems():
             if self.sep in val:
                 for v in val.split(self.sep):
-                        if np.isin(v, s).sum() >= thresh:
+                    if s.apply(lambda x: str(v) in str(x)).sum() >= thresh and (v not in seen):
                             output.append(v)
-            elif n >= thresh:
+                    seen[v] += 1
+            else:
+                if n >= thresh and val not in seen:
                     output.append(val)
+                seen[val] += 1
+
+        return output, seen
+
+    def _encode_column(self, s, thresh):
+        seen = defaultdict(int)
+        for val, n in s.value_counts().iteritems():
+            if self.sep in val:
+                for v in val.split(self.sep):
+                    seen[v] += n
+            else:
+                seen[val] += n
+        output = [v for v, cnt in seen.items() if cnt >= thresh]
+        if self.drop_one and len(output) == len(seen):
+            output.remove(max(seen, key=seen.__getitem__))
         return output
 
     def _apply_encoding(self, X, col):
